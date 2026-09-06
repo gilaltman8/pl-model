@@ -1,0 +1,610 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Premier League 2026/27 — Dixon–Coles model</title>
+<style>
+  :root{
+    --bg:#0e1116; --panel:#161b22; --panel2:#1b222b; --border:#263039;
+    --text:#e7edf3; --muted:#8b97a5; --faint:#5b6672;
+    --win:#35b97a; --draw:#e0a53b; --loss:#e0596a; --accent:#6aa6ff; --track:#222b34;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;background:var(--bg);color:var(--text);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Inter,Helvetica,Arial,sans-serif;
+    font-size:15px;line-height:1.45;-webkit-font-smoothing:antialiased}
+  .tnum{font-variant-numeric:tabular-nums;font-feature-settings:"tnum" 1}
+  .wrap{max-width:1080px;margin:0 auto;padding:22px 20px 40px}
+  a{color:var(--accent)}
+  header{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:16px;
+    padding-bottom:16px;border-bottom:1px solid var(--border)}
+  h1{font-size:22px;font-weight:650;margin:0;letter-spacing:-.01em}
+  h1 span{color:var(--muted);font-weight:450}
+  .sub{color:var(--muted);font-size:13px;margin-top:4px}
+  .live{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--win);margin-right:6px;
+    vertical-align:middle}
+  .params{display:flex;gap:22px;flex-wrap:wrap}
+  .param{text-align:right}
+  .param .v{font-size:20px;font-weight:650}
+  .param .k{font-size:11px;color:var(--muted)}
+  .controls{display:flex;flex-wrap:wrap;align-items:center;gap:18px;margin:16px 0 4px;
+    padding:12px 14px;background:var(--panel);border:1px solid var(--border);border-radius:10px}
+  .controls label{font-size:13px;color:var(--muted);display:flex;align-items:center;gap:8px}
+  input[type=range]{accent-color:var(--accent);width:120px}
+  input[type=number]{width:74px;background:var(--panel2);border:1px solid var(--border);color:var(--text);
+    border-radius:6px;padding:5px 7px;font:inherit}
+  button{background:var(--accent);color:#08111f;border:0;border-radius:7px;padding:8px 14px;font:inherit;
+    font-weight:600;cursor:pointer}
+  button:disabled{opacity:.5;cursor:default}
+  .tabs{display:flex;gap:4px;margin:20px 0 14px;background:var(--panel);padding:4px;border-radius:9px;
+    border:1px solid var(--border);width:max-content;max-width:100%;overflow-x:auto}
+  .tab{padding:8px 16px;border-radius:6px;color:var(--muted);cursor:pointer;font-weight:550;font-size:14px;
+    white-space:nowrap}
+  .tab.on{background:var(--panel2);color:var(--text)}
+  .view{display:none}.view.on{display:block}
+  table{width:100%;border-collapse:collapse}
+  th,td{padding:7px 9px;text-align:right}
+  th{color:var(--muted);font-weight:550;font-size:12px;border-bottom:1px solid var(--border);
+    cursor:default;user-select:none}
+  th.sortable{cursor:pointer}
+  th.lft,td.lft{text-align:left}
+  tbody tr{border-bottom:1px solid #1a2129}
+  tbody tr:hover{background:#131922}
+  .rank{color:var(--faint);width:26px}
+  .team{font-weight:550;white-space:nowrap}
+  .tag{font-size:10px;color:var(--faint);border:1px solid var(--border);border-radius:4px;padding:0 4px;
+    margin-left:6px;vertical-align:middle}
+  tr.zone-cl td:first-child{box-shadow:inset 3px 0 0 var(--accent)}
+  tr.zone-rel td:first-child{box-shadow:inset 3px 0 0 var(--loss)}
+  .bar{position:relative;height:8px;background:var(--track);border-radius:4px;overflow:hidden}
+  .bar>i{position:absolute;left:0;top:0;bottom:0;border-radius:4px;display:block}
+  .cell-bar{display:flex;align-items:center;gap:8px;justify-content:flex-end}
+  .pos{color:var(--win)}.neg{color:var(--loss)}
+  .dim{color:var(--muted)}
+  .form{display:flex;gap:3px;justify-content:flex-end}
+  .fdot{width:9px;height:9px;border-radius:50%}
+  .card{background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:18px}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+  @media(max-width:780px){.grid2{grid-template-columns:1fr}}
+  .selrow{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+  select{background:var(--panel2);border:1px solid var(--border);color:var(--text);border-radius:7px;
+    padding:8px 10px;font:inherit;min-width:150px}
+  .vs{color:var(--muted);font-size:13px}
+  .wdl{display:flex;height:44px;border-radius:8px;overflow:hidden;margin:16px 0 6px;border:1px solid var(--border)}
+  .wdl>div{display:flex;flex-direction:column;align-items:center;justify-content:center;color:#08111f;
+    font-weight:700;font-size:15px;min-width:0;transition:flex-grow .35s ease}
+  .wdl small{font-weight:600;font-size:10px;opacity:.8}
+  .xg{display:flex;justify-content:space-between;color:var(--muted);font-size:13px}
+  .xg b{color:var(--text);font-size:17px}
+  .mstats{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:16px}
+  .mstat{background:var(--panel2);border:1px solid var(--border);border-radius:8px;padding:8px 10px;text-align:center}
+  .mstat .v{font-size:16px;font-weight:650}
+  .mstat .k{font-size:10.5px;color:var(--muted);margin-top:1px}
+  @media(max-width:480px){.mstats{grid-template-columns:repeat(2,1fr)}}
+  .scores h4,.hm h4,.rk h4{margin:0 0 8px;font-size:13px;color:var(--muted);font-weight:550}
+  .scores{margin-top:16px}
+  .sline{display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid #1a2129;font-size:14px}
+  .sline .p{color:var(--muted)}
+  .heat{display:grid;gap:2px;margin-top:4px}
+  .hc{aspect-ratio:1;border-radius:3px;display:flex;align-items:center;justify-content:center;font-size:10px;color:#0c0f14}
+  .hc.lab{background:transparent;color:var(--muted);font-size:11px}
+  .hc.best{outline:2px solid var(--text);outline-offset:-2px}
+  .axl{color:var(--faint);font-size:11px;text-align:center;margin-top:6px}
+  .prog{height:6px;background:var(--track);border-radius:3px;overflow:hidden;margin:14px 0}
+  .prog>i{display:block;height:100%;width:0;background:var(--accent);transition:width .1s linear}
+  .note{color:var(--muted);font-size:12.5px;margin-top:12px;line-height:1.55}
+  .warn{background:#241d10;border:1px solid #4a3a18;color:#e8cf9a;border-radius:9px;padding:11px 14px;
+    font-size:13px;margin:14px 0;line-height:1.5}
+  details{margin-top:26px;border-top:1px solid var(--border);padding-top:14px}
+  summary{cursor:pointer;color:var(--muted);font-size:13px}
+  details p{color:var(--muted);font-size:13px;line-height:1.65}
+  code{background:var(--panel2);padding:1px 5px;border-radius:4px;font-size:12.5px}
+  .fxday{color:var(--muted);font-size:12px;font-weight:600;margin:14px 0 2px;padding-bottom:4px;
+    border-bottom:1px solid var(--border)}
+  .fxday:first-child{margin-top:0}
+  .fx{display:flex;justify-content:space-between;align-items:center;padding:8px 0;
+    border-bottom:1px solid #1a2129;gap:12px;font-size:14px}
+  .fx:last-child{border-bottom:0}
+  .fx .t{flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .fx .t.a{text-align:right}
+  .fxbar{display:flex;height:20px;width:180px;border-radius:5px;overflow:hidden;flex-shrink:0;
+    border:1px solid var(--border);font-size:10px;font-weight:700;color:#08111f}
+  .fxbar>div{display:flex;align-items:center;justify-content:center;min-width:0}
+  @media(max-width:480px){.fxbar{width:120px}}
+  .rk{margin-top:22px}
+  .rkwrap{overflow-x:auto}
+  .rkgrid{display:grid;gap:2px;min-width:640px}
+  .rkc{height:20px;border-radius:2px;display:flex;align-items:center;justify-content:center;
+    font-size:9.5px;color:#0c0f14}
+  .rkc.lab{background:transparent;color:var(--muted);font-size:11px;justify-content:flex-start;white-space:nowrap}
+  .rkc.hdr{background:transparent;color:var(--faint);font-size:10px}
+  footer{margin-top:34px;padding-top:14px;border-top:1px solid var(--border);color:var(--faint);
+    font-size:12px;line-height:1.6}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div>
+      <h1>Premier League 2026/27 <span>· Dixon–Coles</span></h1>
+      <div class="sub" id="sub"><span class="live"></span>loading…</div>
+    </div>
+    <div class="params tnum">
+      <div class="param"><div class="v" id="pGamma">–</div><div class="k">home advantage γ</div></div>
+      <div class="param"><div class="v" id="pRho">–</div><div class="k">low-score ρ</div></div>
+      <div class="param"><div class="v" id="pN">–</div><div class="k">matches played</div></div>
+    </div>
+  </header>
+
+  <div id="earlyWarn" class="warn" style="display:none"></div>
+
+  <div class="controls">
+    <label>last season weight
+      <input type="range" id="hl" min="60" max="600" step="20" value="250">
+      <span id="hlv" class="tnum" style="color:var(--text);width:64px">250d</span></label>
+    <label>shrinkage
+      <input type="range" id="rg" min="0" max="30" step="1" value="8">
+      <span id="rgv" class="tnum" style="color:var(--text);width:22px">8</span></label>
+    <span class="sub" id="fitTime"></span>
+  </div>
+
+  <div class="tabs">
+    <div class="tab on" data-v="table">League table</div>
+    <div class="tab" data-v="ratings">Team ratings</div>
+    <div class="tab" data-v="fixtures">Next fixtures</div>
+    <div class="tab" data-v="predict">Match predictor</div>
+    <div class="tab" data-v="sim">Season projection</div>
+  </div>
+
+  <div class="view on" id="v-table">
+    <table class="tnum" id="tableTbl"><thead><tr>
+      <th class="rank"></th><th class="lft">Team</th><th>P</th><th>W</th><th>D</th><th>L</th>
+      <th>GF</th><th>GA</th><th>GD</th><th>Pts</th><th>Form</th>
+    </tr></thead><tbody></tbody></table>
+    <div class="note">Live table from all played matches. Blue edge — Champions League places, red edge — relegation zone. Form shows the last five results, most recent on the right.</div>
+  </div>
+
+  <div class="view" id="v-ratings">
+    <table class="tnum" id="ratingsTbl"><thead><tr>
+      <th class="rank"></th><th class="lft sortable" data-s="team">Team</th>
+      <th class="sortable" data-s="att">Attack</th><th class="sortable" data-s="def">Defense</th>
+      <th class="sortable" data-s="overall">Overall</th><th class="sortable" data-s="pts">Pts</th>
+    </tr></thead><tbody></tbody></table>
+    <div class="note">
+      <b>Attack</b> — goals scored against an average opponent (1.00 = league average, higher is better).
+      <b>Defense</b> — goals conceded against an average opponent (1.00 = average, <i>lower</i> is better).
+      <b>Overall</b> — log(attack) − log(defense), one strength number.
+      Ratings blend this season with last season; the sliders above control the blend. Click headers to sort.
+    </div>
+  </div>
+
+  <div class="view" id="v-fixtures">
+    <div class="card" id="fxList"></div>
+    <div class="note">Upcoming fixtures with model probabilities. Bar segments are home win / draw / away win.</div>
+  </div>
+
+  <div class="view" id="v-predict">
+    <div class="grid2">
+      <div class="card">
+        <div class="selrow"><select id="home"></select><span class="vs">vs</span><select id="away"></select></div>
+        <div class="wdl" id="wdl"></div>
+        <div class="xg tnum"><span>xG <b id="xgh">–</b></span><span><b id="xga">–</b> xG</span></div>
+        <div class="mstats tnum">
+          <div class="mstat"><div class="v" id="mOver">–</div><div class="k">over 2.5 goals</div></div>
+          <div class="mstat"><div class="v" id="mBtts">–</div><div class="k">both teams score</div></div>
+          <div class="mstat"><div class="v" id="mCsH">–</div><div class="k" id="mCsHk">home clean sheet</div></div>
+          <div class="mstat"><div class="v" id="mCsA">–</div><div class="k" id="mCsAk">away clean sheet</div></div>
+        </div>
+        <div class="scores"><h4>Most likely scorelines</h4><div id="slines"></div></div>
+      </div>
+      <div class="card hm">
+        <h4>Scoreline probability</h4>
+        <div class="heat" id="heat"></div>
+        <div class="axl">away goals →&nbsp;·&nbsp;↑ home goals</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="view" id="v-sim">
+    <div class="controls" style="margin-top:0">
+      <label>simulations <input type="number" id="nsims" value="10000" min="500" step="500"></label>
+      <button id="runSim">Re-run</button>
+      <span class="sub" id="simMeta"></span>
+    </div>
+    <div class="prog" id="progWrap" style="display:none"><i id="prog"></i></div>
+    <table class="tnum" id="simTbl"><thead><tr>
+      <th class="rank"></th><th class="lft">Team</th><th>Now</th><th>Proj pts</th><th>Range</th>
+      <th>Title</th><th>Top 4</th><th>Relegation</th>
+    </tr></thead><tbody></tbody></table>
+    <div class="rk" id="rkBlock" style="display:none">
+      <h4>Finish position distribution</h4>
+      <div class="rkwrap"><div class="rkgrid" id="rkgrid"></div></div>
+      <div class="note" style="margin-top:8px">Each cell — how often the team finishes in that position. Rows ordered by average finish.</div>
+    </div>
+    <div class="note">Played results are locked; all remaining fixtures are simulated from the fitted strengths.
+      Range is the middle 90% of simulated final points.</div>
+  </div>
+
+  <details>
+    <summary>How this works, and why it isn't just this season's table</summary>
+    <p>Each match is two Poisson processes: home goals ~ Poisson(λ), away goals ~ Poisson(μ), where
+    λ = α<sub>home</sub>·β<sub>away</sub>·γ and μ = α<sub>away</sub>·β<sub>home</sub>. α is attack strength,
+    β defensive weakness, γ home advantage. Dixon &amp; Coles (1997) add a correction τ with parameter ρ,
+    because independent Poisson underrates 0-0 and 1-1. Everything is fit by maximum likelihood.</p>
+    <p><b>The early-season problem.</b> With 20 teams there are 42 parameters. Three matchweeks is about
+    30 matches, so an unconstrained fit blows up — a team that hasn't conceded gets an infinitely good
+    defense, and a team that hasn't scored gets an attack of zero. This model handles that two ways:
+    last season's matches are included with exponential time-decay (the "last season weight" slider is the
+    half-life in days), and a ridge penalty shrinks every team toward the league average (the "shrinkage"
+    slider). Turn shrinkage to 0 early in the season and you can watch the fit break.</p>
+    <p><b>Promoted teams</b> have no top-flight history, so they start from a prior measured from how the
+    previous promoted cohort actually performed, then move as results arrive.</p>
+    <p>Data: match results only, no xG required. Refreshed automatically after each round from
+    football-data.co.uk and openfootball.</p>
+  </details>
+
+  <footer>
+    Model: Dixon &amp; Coles (1997), fit by maximum likelihood in the browser ·
+    Data: <a href="https://www.football-data.co.uk">football-data.co.uk</a> +
+    <a href="https://github.com/openfootball/football.json">openfootball</a>, refreshed after each round ·
+    Built by Gil Altman
+  </footer>
+</div>
+
+<script>
+let D=null, MODEL=null, TEAMS=[], PLAYED=[], FIXTURES=[];
+
+// ---------- model ----------
+const day=r=>Date.parse(r[0])/86400000;
+function tau(x,y,l,m,rho){
+  if(x===0&&y===0)return 1-l*m*rho;
+  if(x===0&&y===1)return 1+l*rho;
+  if(x===1&&y===0)return 1+m*rho;
+  if(x===1&&y===1)return 1-rho;
+  return 1;
+}
+function fit(rows,teams,{halflife=250,ridge=8,priorA={},priorD={},iters=2500,lr=0.05}={}){
+  const idx=Object.fromEntries(teams.map((t,i)=>[t,i])), n=teams.length;
+  const played=rows.filter(r=>r[3]!=null&&idx[r[1]]!=null&&idx[r[2]]!=null);
+  const refT=Math.max(...played.map(day));
+  const xi=halflife?Math.log(2)/halflife:0;
+  const M=played.map(r=>({i:idx[r[1]],j:idx[r[2]],x:r[3],y:r[4],w:Math.exp(-xi*(refT-day(r)))}));
+  const pA=teams.map(t=>priorA[t]||0), pD=teams.map(t=>priorD[t]||0);
+  let a=pA.slice(),d=pD.slice(),h=Math.log(1.3),rho=-0.04;
+  const dim=2*n+2;let mA=Array(dim).fill(0),vA=Array(dim).fill(0);
+  const b1=0.9,b2=0.999,e=1e-8;
+  for(let it=1;it<=iters;it++){
+    const ga=Array(n).fill(0),gd=Array(n).fill(0);let gh=0,gr=0;
+    for(const m of M){
+      const {i,j,x,y,w}=m;
+      const l=Math.exp(a[i]+d[j]+h), mu=Math.exp(a[j]+d[i]);
+      const rl=w*(x-l),rm=w*(y-mu);
+      ga[i]+=rl;gd[j]+=rl;gh+=rl;ga[j]+=rm;gd[i]+=rm;
+      if(x<=1&&y<=1){
+        const T=Math.max(tau(x,y,l,mu,rho),1e-7);
+        let dl=0,dm=0,dr=0;
+        if(x===0&&y===0){dl=-mu*rho;dm=-l*rho;dr=-l*mu;}
+        else if(x===0&&y===1){dl=rho;dr=l;}
+        else if(x===1&&y===0){dm=rho;dr=mu;}
+        else{dr=-1;}
+        const c=w/T;
+        ga[i]+=c*dl*l;gd[j]+=c*dl*l;gh+=c*dl*l;ga[j]+=c*dm*mu;gd[i]+=c*dm*mu;gr+=c*dr;
+      }
+    }
+    for(let k=0;k<n;k++){ga[k]-=ridge*(a[k]-pA[k]);gd[k]-=ridge*(d[k]-pD[k]);}
+    const g=[...ga,...gd,gh,gr],p=[...a,...d,h,rho];
+    for(let k=0;k<dim;k++){
+      mA[k]=b1*mA[k]+(1-b1)*g[k];vA[k]=b2*vA[k]+(1-b2)*g[k]*g[k];
+      p[k]+=lr*(mA[k]/(1-Math.pow(b1,it)))/(Math.sqrt(vA[k]/(1-Math.pow(b2,it)))+e);
+    }
+    a=p.slice(0,n);d=p.slice(n,2*n);h=p[2*n];rho=Math.max(-0.3,Math.min(0.3,p[2*n+1]));
+    const ma=a.reduce((s,v)=>s+v,0)/n;for(let k=0;k<n;k++)a[k]-=ma;
+  }
+  return {a,d,h,rho,teams,idx,gamma:Math.exp(h),n};
+}
+function pmf(k,l){let p=Math.exp(-l);for(let x=1;x<=k;x++)p*=l/x;return p;}
+function predict(m,hi,ai,maxG=12){
+  const l=Math.exp(m.a[hi]+m.d[ai]+m.h), mu=Math.exp(m.a[ai]+m.d[hi]);
+  const mat=[];let Z=0,ph=0,pd=0,pa=0;
+  for(let x=0;x<=maxG;x++){mat[x]=[];for(let y=0;y<=maxG;y++){
+    const p=Math.max(tau(x,y,l,mu,m.rho),0)*pmf(x,l)*pmf(y,mu);
+    mat[x][y]=p;Z+=p;if(x>y)ph+=p;else if(x===y)pd+=p;else pa+=p;}}
+  for(let x=0;x<=maxG;x++)for(let y=0;y<=maxG;y++)mat[x][y]/=Z;
+  return {l,mu,ph:ph/Z,pd:pd/Z,pa:pa/Z,mat};
+}
+
+// ---------- data ----------
+async function load(){
+  try{
+    const r=await fetch('data.json?ts='+Date.now());
+    if(!r.ok) throw new Error('HTTP '+r.status);
+    D=await r.json();
+  }catch(err){
+    document.getElementById('sub').innerHTML=
+      'Could not load <code>data.json</code>. Serve this folder over http: <code>python3 -m http.server</code>';
+    return;
+  }
+  TEAMS=D.teams;
+  PLAYED=D.matches.filter(r=>r[3]!=null);
+  FIXTURES=D.matches.filter(r=>r[3]==null);
+  const upd=new Date(D.updated);
+  document.getElementById('sub').innerHTML='<span class="live"></span>'+
+    D.season+' · '+PLAYED.length+' of '+D.matches.length+' matches played · updated '+
+    upd.toLocaleDateString(undefined,{day:'numeric',month:'short'})+' '+
+    upd.toLocaleTimeString(undefined,{hour:'2-digit',minute:'2-digit'});
+  if(PLAYED.length < 100){
+    const mw=Math.round(PLAYED.length/10);
+    const w=document.getElementById('earlyWarn');
+    w.style.display='block';
+    w.innerHTML='<b>Early season.</b> Only '+PLAYED.length+' matches played (~matchweek '+mw+'), against 42 team parameters. '+
+      'Ratings lean heavily on '+D.prevSeason+' and on shrinkage toward the league average — they are genuinely uncertain, '+
+      'not precise. The influence of last season fades automatically as results arrive.';
+  }
+  refit();
+}
+function promotedPriors(){
+  const pA={},pD={};
+  const a=D.promotedPrior?D.promotedPrior.a:-0.16, d=D.promotedPrior?D.promotedPrior.d:0.29;
+  (D.promoted||[]).forEach(t=>{pA[t]=a;pD[t]=d;});
+  return {pA,pD};
+}
+function refit(){
+  const hl=+document.getElementById('hl').value, rg=+document.getElementById('rg').value;
+  const {pA,pD}=promotedPriors();
+  const rows=[...(D.prevMatches||[]),...D.matches];
+  const t0=performance.now();
+  MODEL=fit(rows,TEAMS,{halflife:hl,ridge:rg,priorA:pA,priorD:pD});
+  document.getElementById('fitTime').textContent='fitted in '+Math.round(performance.now()-t0)+' ms';
+  document.getElementById('pGamma').textContent=MODEL.gamma.toFixed(3);
+  document.getElementById('pRho').textContent=MODEL.rho.toFixed(3);
+  document.getElementById('pN').textContent=PLAYED.length;
+  renderTable();renderRatings();fillSelects();renderPredict();renderFixtures();
+  runSim(true);
+}
+
+// ---------- league table ----------
+function teamStats(){
+  const t={};TEAMS.forEach(x=>t[x]={p:0,w:0,d:0,l:0,gf:0,ga:0,pts:0,form:[]});
+  const chron=[...PLAYED].sort((a,b)=>day(a)-day(b));
+  for(const r of chron){
+    const h=r[1],a=r[2],hg=r[3],ag=r[4];
+    if(!t[h]||!t[a])continue;
+    t[h].p++;t[a].p++;t[h].gf+=hg;t[h].ga+=ag;t[a].gf+=ag;t[a].ga+=hg;
+    if(hg>ag){t[h].w++;t[a].l++;t[h].pts+=3;t[h].form.push('W');t[a].form.push('L');}
+    else if(hg<ag){t[a].w++;t[h].l++;t[a].pts+=3;t[h].form.push('L');t[a].form.push('W');}
+    else{t[h].d++;t[a].d++;t[h].pts++;t[a].pts++;t[h].form.push('D');t[a].form.push('D');}
+  }
+  return t;
+}
+function liveOrder(t){
+  return Object.entries(t).sort((x,y)=>y[1].pts-x[1].pts||(y[1].gf-y[1].ga)-(x[1].gf-x[1].ga)||y[1].gf-x[1].gf);
+}
+function renderTable(){
+  const st=teamStats(), ord=liveOrder(st);
+  const tb=document.querySelector('#tableTbl tbody');tb.innerHTML='';
+  ord.forEach(([team,s],k)=>{
+    const gd=s.gf-s.ga;
+    const dots=s.form.slice(-5).map(f=>{
+      const c=f==='W'?'var(--win)':f==='D'?'var(--draw)':'var(--loss)';
+      return `<span class="fdot" style="background:${c}" title="${f}"></span>`;}).join('');
+    const tr=document.createElement('tr');
+    if(k<4)tr.className='zone-cl'; if(k>=TEAMS.length-3)tr.className='zone-rel';
+    tr.innerHTML=`<td class="rank">${k+1}</td><td class="lft team">${team}</td>
+      <td class="dim">${s.p}</td><td>${s.w}</td><td>${s.d}</td><td>${s.l}</td>
+      <td class="dim">${s.gf}</td><td class="dim">${s.ga}</td>
+      <td class="${gd>0?'pos':gd<0?'neg':'dim'}">${gd>0?'+':''}${gd}</td>
+      <td><b>${s.pts}</b></td><td><div class="form">${dots}</div></td>`;
+    tb.appendChild(tr);
+  });
+}
+
+// ---------- ratings ----------
+let sortKey='overall',sortDir=-1;
+function renderRatings(){
+  const st=teamStats();
+  const rows=MODEL.teams.map((t,i)=>({team:t,att:Math.exp(MODEL.a[i]),def:Math.exp(MODEL.d[i]),
+    overall:MODEL.a[i]-MODEL.d[i],pts:st[t]?st[t].pts:0,prom:(D.promoted||[]).includes(t)}));
+  rows.sort((p,q)=>sortKey==='team'?(p.team<q.team?-1:1)*sortDir:(p[sortKey]-q[sortKey])*sortDir);
+  const aMax=Math.max(...rows.map(r=>r.att)), dMax=Math.max(...rows.map(r=>r.def));
+  const tb=document.querySelector('#ratingsTbl tbody');tb.innerHTML='';
+  rows.forEach((r,k)=>{
+    const tr=document.createElement('tr');
+    tr.innerHTML=`<td class="rank">${k+1}</td>
+      <td class="lft team">${r.team}${r.prom?'<span class="tag">promoted</span>':''}</td>
+      <td><div class="cell-bar">${r.att.toFixed(2)}<div class="bar" style="width:72px"><i style="width:${r.att/aMax*100}%;background:var(--accent)"></i></div></div></td>
+      <td><div class="cell-bar">${r.def.toFixed(2)}<div class="bar" style="width:72px"><i style="width:${r.def/dMax*100}%;background:var(--loss)"></i></div></div></td>
+      <td class="${r.overall>=0?'pos':'neg'}">${r.overall>=0?'+':''}${r.overall.toFixed(2)}</td>
+      <td class="dim">${r.pts}</td>`;
+    tb.appendChild(tr);
+  });
+}
+document.querySelectorAll('#ratingsTbl th.sortable').forEach(th=>{
+  th.onclick=()=>{const k=th.dataset.s;if(sortKey===k)sortDir*=-1;else{sortKey=k;sortDir=k==='team'?1:-1;}renderRatings();};
+});
+
+// ---------- fixtures ----------
+function renderFixtures(){
+  const el=document.getElementById('fxList');
+  const next=[...FIXTURES].sort((a,b)=>day(a)-day(b)).slice(0,20);
+  if(!next.length){el.innerHTML='<div class="note" style="margin:0">Season complete — no fixtures left.</div>';return;}
+  let html='',lastDate='';
+  for(const r of next){
+    const i=MODEL.idx[r[1]],j=MODEL.idx[r[2]];
+    if(i==null||j==null)continue;
+    if(r[0]!==lastDate){
+      lastDate=r[0];
+      html+=`<div class="fxday">${new Date(r[0]).toLocaleDateString(undefined,{weekday:'long',day:'numeric',month:'long'})}</div>`;
+    }
+    const P=predict(MODEL,i,j);
+    const s=(v,c)=>`<div style="flex-grow:${Math.max(v,.001)};background:${c}">${v>=.15?(v*100).toFixed(0):''}</div>`;
+    html+=`<div class="fx"><span class="t">${r[1]}</span>
+      <span class="fxbar">${s(P.ph,'var(--win)')}${s(P.pd,'var(--draw)')}${s(P.pa,'var(--loss)')}</span>
+      <span class="t a">${r[2]}</span></div>`;
+  }
+  el.innerHTML=html;
+}
+
+// ---------- predictor ----------
+function fillSelects(){
+  const h=document.getElementById('home'),a=document.getElementById('away');
+  const cur=[h.value,a.value];
+  [h,a].forEach(s=>s.innerHTML=MODEL.teams.map(t=>`<option>${t}</option>`).join(''));
+  if(MODEL.teams.includes(cur[0])){h.value=cur[0];a.value=cur[1];}
+  else if(FIXTURES.length){h.value=FIXTURES[0][1];a.value=FIXTURES[0][2];}
+  else{h.value=MODEL.teams[0];a.value=MODEL.teams[1];}
+}
+function renderPredict(){
+  const H=document.getElementById('home').value, A=document.getElementById('away').value;
+  const hi=MODEL.idx[H], ai=MODEL.idx[A];
+  if(hi==null||ai==null)return;
+  const P=predict(MODEL,hi,ai);
+  const seg=(c,lab,v)=>`<div style="flex-grow:${Math.max(v,.001)};background:${c}"><span>${(v*100).toFixed(0)}%</span><small>${lab}</small></div>`;
+  document.getElementById('wdl').innerHTML=
+    seg('var(--win)','home',P.ph)+seg('var(--draw)','draw',P.pd)+seg('var(--loss)','away',P.pa);
+  document.getElementById('xgh').textContent=P.l.toFixed(2);
+  document.getElementById('xga').textContent=P.mu.toFixed(2);
+  let over=0,btts=0,csH=0,csA=0;
+  for(let x=0;x<=12;x++)for(let y=0;y<=12;y++){
+    const p=P.mat[x][y];
+    if(x+y>2)over+=p; if(x>0&&y>0)btts+=p; if(y===0)csH+=p; if(x===0)csA+=p;
+  }
+  const pc=v=>(v*100).toFixed(0)+'%';
+  document.getElementById('mOver').textContent=pc(over);
+  document.getElementById('mBtts').textContent=pc(btts);
+  document.getElementById('mCsH').textContent=pc(csH);
+  document.getElementById('mCsA').textContent=pc(csA);
+  document.getElementById('mCsHk').textContent=H+' clean sheet';
+  document.getElementById('mCsAk').textContent=A+' clean sheet';
+  const list=[];for(let x=0;x<=8;x++)for(let y=0;y<=8;y++)list.push([x,y,P.mat[x][y]]);
+  list.sort((p,q)=>q[2]-p[2]);
+  document.getElementById('slines').innerHTML=list.slice(0,6).map(s=>
+    `<div class="sline"><span>${s[0]}–${s[1]}</span><span class="p">${(s[2]*100).toFixed(1)}%</span></div>`).join('');
+  const N=6;let best=[0,0,-1];
+  for(let x=0;x<=N;x++)for(let y=0;y<=N;y++)if(P.mat[x][y]>best[2])best=[x,y,P.mat[x][y]];
+  const heat=document.getElementById('heat');
+  heat.style.gridTemplateColumns=`26px repeat(${N+1},1fr)`;
+  let html='<div class="hc lab"></div>';
+  for(let y=0;y<=N;y++)html+=`<div class="hc lab">${y}</div>`;
+  for(let x=0;x<=N;x++){
+    html+=`<div class="hc lab">${x}</div>`;
+    for(let y=0;y<=N;y++){
+      const p=P.mat[x][y], base=x>y?'53,185,122':x===y?'224,165,59':'224,89,106';
+      html+=`<div class="hc ${(x===best[0]&&y===best[1])?'best':''}" style="background:rgba(${base},${0.12+Math.min(p/best[2],1)*0.88})">${p>=0.03?(p*100).toFixed(0):''}</div>`;
+    }
+  }
+  heat.innerHTML=html;
+}
+['home','away'].forEach(id=>document.getElementById(id).onchange=renderPredict);
+
+// ---------- season projection ----------
+let SIMRUNNING=false;
+function runSim(auto){
+  if(SIMRUNNING)return;
+  if(!FIXTURES.length){document.getElementById('simMeta').textContent='Season complete.';return;}
+  SIMRUNNING=true;
+  const nsims=auto?4000:Math.max(500,+document.getElementById('nsims').value|0);
+  const n=MODEL.n, maxG=9;
+  const st=teamStats(), nowPos={};liveOrder(st).forEach(([t],i)=>nowPos[t]=i+1);
+  const basePts=new Float64Array(n),baseGf=new Float64Array(n),baseGa=new Float64Array(n);
+  for(const r of PLAYED){
+    const i=MODEL.idx[r[1]],j=MODEL.idx[r[2]];if(i==null||j==null)continue;
+    baseGf[i]+=r[3];baseGa[i]+=r[4];baseGf[j]+=r[4];baseGa[j]+=r[3];
+    if(r[3]>r[4])basePts[i]+=3;else if(r[3]<r[4])basePts[j]+=3;else{basePts[i]++;basePts[j]++;}
+  }
+  const fx=FIXTURES.map(r=>{
+    const i=MODEL.idx[r[1]],j=MODEL.idx[r[2]];if(i==null||j==null)return null;
+    const {mat}=predict(MODEL,i,j,maxG);
+    const cx=[],cy=[],cum=[];let c=0;
+    for(let x=0;x<=maxG;x++)for(let y=0;y<=maxG;y++){c+=mat[x][y];cx.push(x);cy.push(y);cum.push(c);}
+    for(let k=0;k<cum.length;k++)cum[k]/=c;
+    return {i,j,cx,cy,cum};
+  }).filter(Boolean);
+  const samp=cum=>{const u=Math.random();let lo=0,hi=cum.length-1;
+    while(lo<hi){const m=(lo+hi)>>1;if(cum[m]<u)lo=m+1;else hi=m;}return lo;};
+  const sumPts=new Float64Array(n),sumRank=new Float64Array(n),
+        champ=new Float64Array(n),top4=new Float64Array(n),releg=new Float64Array(n),
+        rankCount=new Float64Array(n*n);
+  const ptsSamples=Array.from({length:n},()=>new Float64Array(nsims));
+  const order=Array.from({length:n},(_,k)=>k);
+  const btn=document.getElementById('runSim');btn.disabled=true;
+  const pw=document.getElementById('progWrap');pw.style.display=auto?'none':'block';
+  let done=0;const chunk=Math.max(200,Math.round(nsims/40));
+  function batch(){
+    const end=Math.min(done+chunk,nsims);
+    for(let s=done;s<end;s++){
+      const pts=Float64Array.from(basePts),gf=Float64Array.from(baseGf),ga=Float64Array.from(baseGa);
+      for(const f of fx){
+        const k=samp(f.cum),x=f.cx[k],y=f.cy[k];
+        gf[f.i]+=x;ga[f.i]+=y;gf[f.j]+=y;ga[f.j]+=x;
+        if(x>y)pts[f.i]+=3;else if(x<y)pts[f.j]+=3;else{pts[f.i]++;pts[f.j]++;}
+      }
+      order.sort((p,q)=>pts[q]-pts[p]||(gf[q]-ga[q])-(gf[p]-ga[p])||gf[q]-gf[p]);
+      for(let r=0;r<n;r++){
+        const t=order[r];
+        sumPts[t]+=pts[t];sumRank[t]+=r+1;ptsSamples[t][s]=pts[t];rankCount[t*n+r]++;
+        if(r===0)champ[t]++;if(r<4)top4[t]++;if(r>=n-3)releg[t]++;
+      }
+    }
+    done=end;
+    if(!auto)document.getElementById('prog').style.width=(done/nsims*100)+'%';
+    if(done<nsims)setTimeout(batch,0);else finish();
+  }
+  function finish(){
+    const rows=MODEL.teams.map((t,i)=>{
+      const srt=Float64Array.from(ptsSamples[i]).sort();
+      return {team:t,i,exp:sumPts[i]/nsims,rank:sumRank[i]/nsims,
+        lo:srt[Math.floor(nsims*0.05)],hi:srt[Math.min(nsims-1,Math.floor(nsims*0.95))],
+        champ:champ[i]/nsims,top4:top4[i]/nsims,releg:releg[i]/nsims,now:nowPos[t]||'–'};
+    });
+    rows.sort((p,q)=>p.rank-q.rank);
+    const tb=document.querySelector('#simTbl tbody');tb.innerHTML='';
+    rows.forEach((r,k)=>{
+      const pbar=(v,c)=>`<div class="cell-bar">${v>=0.005?(v*100).toFixed(0)+'%':'·'}<div class="bar" style="width:48px"><i style="width:${v*100}%;background:${c}"></i></div></div>`;
+      const tr=document.createElement('tr');
+      if(k<4)tr.className='zone-cl'; if(k>=n-3)tr.className='zone-rel';
+      tr.innerHTML=`<td class="rank">${k+1}</td><td class="lft team">${r.team}</td>
+        <td class="dim">${r.now}</td><td><b>${r.exp.toFixed(1)}</b></td>
+        <td class="dim">${Math.round(r.lo)}–${Math.round(r.hi)}</td>
+        <td>${pbar(r.champ,'var(--win)')}</td><td>${pbar(r.top4,'var(--accent)')}</td>
+        <td>${pbar(r.releg,'var(--loss)')}</td>`;
+      tb.appendChild(tr);
+    });
+    // finish-position heatmap
+    const g=document.getElementById('rkgrid');
+    g.style.gridTemplateColumns=`110px repeat(${n},1fr)`;
+    let html='<div class="rkc lab"></div>';
+    for(let p=1;p<=n;p++)html+=`<div class="rkc hdr">${p}</div>`;
+    let mx=0;for(let k=0;k<rankCount.length;k++)mx=Math.max(mx,rankCount[k]);
+    for(const r of rows){
+      html+=`<div class="rkc lab">${r.team}</div>`;
+      for(let p=0;p<n;p++){
+        const v=rankCount[r.i*n+p]/nsims;
+        const op=v>0?0.10+0.9*(rankCount[r.i*n+p]/mx):0;
+        html+=`<div class="rkc" style="background:rgba(106,166,255,${op.toFixed(3)})">${v>=0.10?Math.round(v*100):''}</div>`;
+      }
+    }
+    g.innerHTML=html;
+    document.getElementById('rkBlock').style.display='block';
+    document.getElementById('simMeta').textContent=nsims.toLocaleString()+' simulations · '+fx.length+' fixtures remaining';
+    btn.disabled=false;pw.style.display='none';SIMRUNNING=false;
+  }
+  batch();
+}
+document.getElementById('runSim').onclick=()=>runSim(false);
+
+// ---------- ui ----------
+document.querySelectorAll('.tab').forEach(tab=>tab.onclick=()=>{
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('on'));
+  document.querySelectorAll('.view').forEach(v=>v.classList.remove('on'));
+  tab.classList.add('on');document.getElementById('v-'+tab.dataset.v).classList.add('on');
+});
+let deb;
+document.getElementById('hl').oninput=e=>{document.getElementById('hlv').textContent=e.target.value+'d';
+  clearTimeout(deb);deb=setTimeout(refit,180);};
+document.getElementById('rg').oninput=e=>{document.getElementById('rgv').textContent=e.target.value;
+  clearTimeout(deb);deb=setTimeout(refit,180);};
+load();
+</script>
+</body>
+</html>
